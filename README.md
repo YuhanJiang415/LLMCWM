@@ -2,6 +2,8 @@
 
 This is the official code repository for the paper **"Language Agents Meet Causality -- Bridging LLMs and Causal World Models"**.
 
+[Project Page](https://j0hngou.github.io/LLMCWM/)
+
 ![Figure 2](Figure2.png)
 
 **Figure 2:** Illustration of the first roll-out step with the Causal World Model. The image $\mathbf{X}^0$ and action description $L^0$ are encoded into initial latent representations. The CRL module then disentangles these representations, and the transition model predicts the next state. The causal mapper transforms the disentangled causal representation of the next state into the estimated causal variables $\mathbf{\hat{C}}^1$. Finally, the state descriptor $s$ generates a natural language description $\ell^1$ of the next state. For subsequent steps, the model can autoregress in the latent space using the previously predicted $\mathbf{z}$, bypassing the autoencoder and normalizing flow, enabling efficient multi-step inference and planning.
