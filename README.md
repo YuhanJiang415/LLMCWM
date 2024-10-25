@@ -33,7 +33,7 @@ The code was developed and tested with Python 3.8 and PyTorch 1.13. We recommend
 
 3. **Activate the environment:**
    ```bash
-   conda activate causal_world_model
+   conda activate llm-cwm
    ```
 
 ## Datasets
