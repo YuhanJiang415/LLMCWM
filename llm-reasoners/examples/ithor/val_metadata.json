@@ -1,0 +1,50 @@
+{
+    "object_names": [
+        "obstacle_(255, 165, 0)",
+        "trafficlight_(0, 255, 255)",
+        "trafficlight_(100, 100, 0)",
+        "trafficlight_(192, 192, 192)",
+        "vehicle_(0, 0, 255)",
+        "vehicle_(192, 192, 192)",
+        "vehicle_(255, 0, 0)"
+    ],
+    "action_types": [
+        "turn",
+        "change_state",
+        "move"
+    ],
+    "causal_keys": [
+        "trafficlight_(0, 255, 255)_state",
+        "trafficlight_(192, 192, 192)_state",
+        "trafficlight_(100, 100, 0)_state",
+        "vehicle_(0, 0, 255)_position",
+        "obstacle_(255, 165, 0)_position",
+        "vehicle_(192, 192, 192)_position",
+        "vehicle_(255, 0, 0)_position"
+    ],
+    "flattened_causals": [
+        "Cabinet_47fc321b_open",
+        "Egg_afaaaca3_broken",
+        "Egg_afaaaca3_center_x",
+        "Egg_afaaaca3_center_y",
+        "Egg_afaaaca3_center_z",
+        "Egg_afaaaca3_cooked",
+        "Egg_afaaaca3_pickedup",
+        "Microwave_d8b935e4_on",
+        "Microwave_d8b935e4_open",
+        "Plate_49b95a7a_center_x",
+        "Plate_49b95a7a_center_y",
+        "Plate_49b95a7a_center_z",
+        "Plate_49b95a7a_pickedup",
+        "StoveKnob_38c1dbc2_on",
+        "StoveKnob_690d0d5d_on",
+        "StoveKnob_c8955f66_on",
+        "StoveKnob_cf670576_on",
+        "Toaster_194647f5_on"
+    ],
+    "are_interventions_stochastic": true,
+    "grid_x": 8,
+    "grid_y": 8,
+    "sprite_size": 32,
+    "can_move_car": true
+}

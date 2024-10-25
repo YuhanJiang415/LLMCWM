@@ -1,0 +1,3 @@
+AE_40l_64hid_3c1b3l.ckpt filter=lfs diff=lfs merge=lfs -text
+causal_encoders.pt filter=lfs diff=lfs merge=lfs -text
+epoch=39-step=19760.ckpt filter=lfs diff=lfs merge=lfs -text
