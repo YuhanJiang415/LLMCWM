@@ -22,8 +22,8 @@ The code was developed and tested with Python 3.8 and PyTorch 1.13. We recommend
 
 1. **Clone the repository:**
    ```bash
-   git clone <repository_url>
-   cd <repository_directory>
+   git clone https://github.com/j0hngou/LLMCWM.git
+   cd LLMCWM
    ```
 
 2. **Create a new conda environment:**
