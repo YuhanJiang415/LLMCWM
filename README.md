@@ -1,4 +1,4 @@
-# Bridging LLMs and Causal World Models
+ # Bridging LLMs and Causal World Models
 
 This is the official code repository for the paper **"Language Agents Meet Causality -- Bridging LLMs and Causal World Models"**.
 
@@ -166,6 +166,39 @@ To train the baseline models, the same script `causal_mappers_all.py` is used. T
 ## Causal Reasoning and Planning Experiments
 
 We forked the `llm-reasoners` repository and modified it for our experiments.
+
+### Generating Plan Datasets
+
+Before running the planning experiments, you need to generate the plan datasets that will be used for training and evaluation. The script `generate_plan_datasets.py` in the `llm-reasoners/examples` directory handles this task.
+
+This script generates trajectories and prompts for both iTHOR and GridWorld environments. It creates:
+1. Trajectory data with images, actions, and latent states
+2. Prompt JSON files containing:
+   - Example scenarios for planning
+   - Self-evaluation prompts
+   - In-context learning prompts for different action types
+
+To generate the datasets, run:
+
+```bash
+python examples/generate_plan_datasets.py --dataset <dataset_type> --N <trajectory_length> --M <num_trajectories> --output_dir <output_dir> --data_folder <data_folder> --config_path <config_path> [--prompt_name <prompt_name>] [--max_examples <max_examples>]
+```
+
+Required arguments:
+- `--dataset`: Choose between 'ithor' or 'gridworld'
+- `--N`: Length of each trajectory
+- `--M`: Number of trajectories to generate
+- `--output_dir`: Directory to save the generated data
+- `--data_folder`: Path to the dataset folder
+- `--config_path`: Path to the configuration file
+
+Optional arguments:
+- `--prompt_name`: Custom name for the prompt file (default: prompt_<N>step.json)
+- `--max_examples`: Maximum number of examples in prompt (gridworld only, default: 10)
+
+The script will generate:
+- A trajectory file (`step_<N>_ws.pth` for iTHOR or `step_<N>.pth` for GridWorld)
+- A prompt JSON file containing various prompts for planning and evaluation
 
 ### Planning Experiments
 
