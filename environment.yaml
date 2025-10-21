@@ -351,7 +351,7 @@ dependencies:
     - flask==3.0.0
     - folium==0.15.1
     - fqdn==1.5.1
-    - fsspec==2024.6.0
+    - fsspec[http]
     - ftfy==6.1.1
     - geographiclib==2.0
     - geopy==2.4.1

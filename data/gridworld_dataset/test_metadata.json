@@ -1,0 +1,35 @@
+{
+    "object_names": [
+        "obstacle_(192, 192, 192)",
+        "trafficlight_(0, 255, 255)",
+        "trafficlight_(100, 100, 0)",
+        "trafficlight_(192, 192, 192)",
+        "vehicle_(0, 0, 255)",
+        "vehicle_(192, 192, 192)",
+        "vehicle_(255, 0, 0)"
+    ],
+    "action_types": [
+        "turn",
+        "change_state",
+        "move"
+    ],
+    "causal_keys": [
+        "trafficlight_(0, 255, 255)_state",
+        "trafficlight_(192, 192, 192)_state",
+        "trafficlight_(100, 100, 0)_state",
+        "obstacle_(192, 192, 192)_position",
+        "vehicle_(0, 0, 255)_position",
+        "vehicle_(192, 192, 192)_position",
+        "vehicle_(255, 0, 0)_position"
+    ],
+    "flattened_causals": [
+        "obstacle_(192, 192, 192)_position_y",
+        "trafficlight_(0, 255, 255)_state",
+        "trafficlight_(100, 100, 0)_state",
+        "trafficlight_(192, 192, 192)_state"
+    ],
+    "are_interventions_stochastic": true,
+    "grid_x": 8,
+    "grid_y": 8,
+    "sprite_size": 32
+}

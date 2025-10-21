@@ -77,18 +77,98 @@ class GridEntity(ABC):
     @classmethod
     def load_sprite(cls, entity_type, color, orientation, state=None):
         """
-        Loads a sprite from the cache based on the entity type, color, orientation, and state.
-
-        Args:
-            entity_type (str): The type of the entity.
-            color (tuple): The RGB color of the entity.
-            orientation (str): The orientation of the entity.
-            state (str, optional): The current state of the entity, if applicable.
-
-        Returns:
-            Image: The loaded sprite image.
+        从缓存读取精灵贴图；若未命中，则按实体类型从磁盘加载并写入缓存。
+        - cars, boulders：素材不区分朝向/状态 -> 规范化为 (orientation=None, state=None)
+        - lights：不区分朝向，只用状态 red/green
+        路径使用 __file__ 定位到 data_generation/sprites，避免工作目录不同导致找不到文件。
         """
-        return cls.sprite_cache[entity_type][(str(color), orientation, state)]
+        import os
+        from PIL import Image
+
+        # --- 记录原始请求键（用于兼容性回填） ---
+        orig_orientation = orientation
+        orig_state = state
+
+        color_key = str(color)  # 文件名里用的是字符串形式的 (R, G, B)
+
+        # --- 1) 键归一化 ---
+        if entity_type in ('cars', 'boulders'):
+            orientation = None
+            state = None
+        elif entity_type == 'lights':
+            orientation = None
+            # 规范成 red/green
+            if isinstance(state, bool):
+                state = 'green' if state else 'red'
+            elif isinstance(state, (int, float)):
+                state = 'green' if state else 'red'
+            elif isinstance(state, str):
+                s = state.lower()
+                if s in ('g', 'green'):
+                    state = 'green'
+                elif s in ('r', 'red'):
+                    state = 'red'
+                else:
+                    state = 'red'
+            else:
+                state = 'red'
+        else:
+            # 其它类型（如果有）不处理
+            pass
+
+        key = (color_key, orientation, state)
+
+        # --- 2) 子缓存准备 ---
+        if entity_type not in cls.sprite_cache:
+            cls.sprite_cache[entity_type] = {}
+        sub = cls.sprite_cache[entity_type]
+
+        # 命中直接返回
+        if key in sub:
+            return sub[key]
+
+        # 兼容回退：尝试常见的老键样式
+        for k in [
+            (color_key, None, state),
+            (color_key, None, None),
+            (color_key, orig_orientation, None),
+            (color_key, orig_orientation, orig_state),
+        ]:
+            if k in sub:
+                return sub[k]
+
+        # --- 3) 未命中则落盘加载 ---
+        sprites_root = os.path.join(os.path.dirname(__file__), 'sprites')
+        if entity_type == 'cars':
+            sprite_path = os.path.join(sprites_root, 'cars', f"car_{color_key}_(255, 255, 0).png")
+        elif entity_type == 'boulders':
+            sprite_path = os.path.join(sprites_root, 'boulders', f"boulder_{color_key}.png")
+        elif entity_type == 'lights':
+            sprite_path = os.path.join(sprites_root, 'lights', f"light_{color_key}_{state}.png")
+        else:
+            raise ValueError(f"Unknown entity_type: {entity_type}")
+
+        # 如主路径不存在，再尝试使用相对当前工作目录（以防万一）
+        if not os.path.exists(sprite_path):
+            alt_path = os.path.join('sprites', os.path.relpath(sprite_path, sprites_root))
+            if os.path.exists(alt_path):
+                sprite_path = alt_path
+
+        if not os.path.exists(sprite_path):
+            # 打印上下文，便于快速定位问题
+            print(f"[load_sprite] File not found for {entity_type} key={key}: {sprite_path}")
+            raise FileNotFoundError(sprite_path)
+
+        img = Image.open(sprite_path).convert('RGBA')
+
+        # --- 4) 写回缓存（主键 + 兼容键），减少后续 miss ---
+        sub[key] = img
+        # 把原始请求键也映射到同一对象（避免后续代码用原始键再取一次）
+        sub[(color_key, orig_orientation, orig_state)] = img
+        sub[(color_key, None, None)] = img  # 常见回退键
+
+        return img
+
 
     def __init__(self, x, y, entity_type, color, orientation=None, speed=1, sprite_path='sprites/', sprite_size=64):
         self.id = GridEntity.last_id

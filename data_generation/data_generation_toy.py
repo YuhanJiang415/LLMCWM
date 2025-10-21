@@ -9,6 +9,17 @@ import numpy as np
 from gridworld import GridEntity, Gridworld
 from tqdm import tqdm
 import argparse
+import multiprocessing as mp
+
+# mp.set_start_method('spawn')
+
+
+
+def _select_causal(vec):
+    """统一选择 8 个维度，并返回 Python list[float]。"""
+    idx = [0, 1, 2, 3, 4, 5, 7, 9]
+    # 兼容 vec 是 list/tuple/np.ndarray
+    return [float(vec[i]) for i in idx]
 
 
 def save_metadata(dataset_name, split, gridworld, simplified=True):
@@ -59,8 +70,8 @@ def run_simulation(seed, split, dataset_name='gridworld', grid_x=16, grid_y=16, 
         # (255, 0, 0), # Red
         # (0, 0, 255), # Blue
         # (0, 255, 255), # Cyan
-        # (192, 192, 192), # Silver
-        (255, 165, 0), # Orange
+        (192, 192, 192), # Silver
+        # (255, 165, 0), # Orange
     ]
 
     # Preload sprites for each entity type with their specific color subsets
@@ -70,10 +81,11 @@ def run_simulation(seed, split, dataset_name='gridworld', grid_x=16, grid_y=16, 
         'boulders': boulder_colors
     }
     orientations = ['up', 'down', 'left', 'right']
-    GridEntity.preload_sprites(colors_dict, orientations, sprite_path='sprites/', sprite_size=sprite_size)
+    GridEntity.preload_sprites(colors_dict, orientations, sprite_path='data_generation/sprites/', sprite_size=sprite_size)
 
     # Create an instance of Gridworld
-    gridworld = Gridworld(grid_x, grid_y, sprite_size=128)
+    # gridworld = Gridworld(grid_x, grid_y, sprite_size=128)
+    gridworld = Gridworld(grid_x, grid_y, sprite_size=sprite_size)
 
     # Initialize the gridworld with vehicles, traffic lights, and boulders
     gridworld.randomly_initialize(car_colors, light_colors, boulder_colors, num_cars=3, num_lights=3, num_boulders=1, fixed_light_positions=fixed_light_positions, x_percent=50, y_percent=10, z_percent=20, shuffle_cars=False)
@@ -82,6 +94,7 @@ def run_simulation(seed, split, dataset_name='gridworld', grid_x=16, grid_y=16, 
     gridworld.step()  # Initial step to set up the environment
     initial_frame = gridworld.render()
     initial_causal_vector = gridworld.get_causal_vector(are_light_positions_fixed=True)
+    initial_causal_vector = _select_causal(initial_causal_vector)  # 统一成 8 维
     # initial_causal_vector = initial_causal_vector[:4] + initial_causal_vector[5:]
 
     frames = [initial_frame.copy()]  # List of frames, starting with the initial frame
@@ -117,7 +130,8 @@ def run_simulation(seed, split, dataset_name='gridworld', grid_x=16, grid_y=16, 
         # Append causal information
         # Simplified, so the car position x is unidentifiable, so we remove it
         causal_vector = gridworld.get_causal_vector(are_light_positions_fixed=True)
-        causal_vector = causal_vector[[0, 1, 2, 3, 4, 5, 7, 9]]
+        # causal_vector = causal_vector[[0, 1, 2, 3, 4, 5, 7, 9]]
+        causal_vector = _select_causal(causal_vector)
         
         causals.append(causal_vector)
         
@@ -135,12 +149,25 @@ def run_simulation(seed, split, dataset_name='gridworld', grid_x=16, grid_y=16, 
     if not os.path.exists(f'data/{dataset_name}/{split}'):
         os.makedirs(f'data/{dataset_name}/{split}', exist_ok=True)
     
-    np.savez_compressed(f'data/{dataset_name}/{split}/gridworld_episode_{seed}.npz', 
-                frames=np.array(frames),
-                causals=np.array(causals),
-                actions=np.array(actions),
-                interventions=np.array(interventions),
-                action_descriptions=np.array(action_descriptions),
+    # np.savez_compressed(f'data/{dataset_name}/{split}/gridworld_episode_{seed}.npz', 
+    #             frames=np.array(frames),
+    #             causals=np.array(causals),
+    #             actions=np.array(actions),
+    #             interventions=np.array(interventions),
+    #             action_descriptions=np.array(action_descriptions),
+    # )
+    
+    np.savez_compressed(
+        f'data/{dataset_name}/{split}/gridworld_episode_{seed}.npz',
+        # PIL Image 等可变对象：保持 object 数组，避免强制挤成不规则 nd-array
+        # frames=np.array(frames, dtype=object),
+        frames=np.stack([np.array(frame) for frame in frames], axis=0),
+        # 8 维因果向量：形状一致，直接 stack 成 (T, 8)
+        causals=np.stack(causals, axis=0),
+        # 可能长度/结构不一致的序列，使用 object 更稳妥
+        actions=np.array(actions, dtype=object),
+        interventions=np.array(interventions, dtype=object),
+        action_descriptions=np.array(action_descriptions, dtype=object),
     )
     
     if save_metadata_flag:
@@ -159,7 +186,7 @@ def gen_data(seeds, batch_size, split, dataset_name='gridworld', grid_x=16, grid
     run_batch_split = partial(run_batch, split=split, dataset_name=dataset_name, grid_x=grid_x, grid_y=grid_y, sprite_size=sprite_size, fixed_light_positions=fixed_light_positions, pre_intervention_step=pre_intervention_step)
     batches = [seeds[i:i + batch_size] for i in range(0, len(seeds), batch_size)]
     
-    with Pool() as pool:
+    with Pool(processes=1) as pool:
         # Wrap pool.map with tqdm for progress tracking
         list(tqdm(pool.imap_unordered(run_batch_split, batches), total=len(batches)))
 

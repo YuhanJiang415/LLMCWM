@@ -63,7 +63,7 @@ def load_model(model_path, autoencoder_path, device='cuda'):
     """
     from models.biscuit_nf import BISCUITNF  # Import here to avoid circular imports
     model = BISCUITNF.load_from_checkpoint(
-        model_path, autoencoder_path=autoencoder_path, map_location=device
+        model_path, autoencoder_checkpoint=autoencoder_path, map_location=device
     )
     model = model.to(device)
     return model
@@ -113,7 +113,8 @@ def load_dataset(environment, data_folder, split='val', subsample_percentage=0.0
         raise ValueError(f"Unknown environment: {environment}")
     return dataset
 
-def encode_dataset(model, dataset, batch_size=256, device='cpu'):
+def encode_dataset(model, dataset, batch_size=32, device='cpu'):
+# def encode_dataset(model, dataset, batch_size=256, device='cpu'):
     """
     Encode the dataset using the model's encoder.
 
@@ -194,19 +195,59 @@ def train_causal_encoder(model, dataset, device='cuda'):
 
     return r2_matrix, encoder, target_assignment, losses
 
-def prepare_input(inps, target_assignment, latents, flatten_inp=True):
-    # Move inputs and latents to the device of target_assignment
-    device = target_assignment.device
-    inps = inps.to(device)
-    latents = latents.to(device)
+# def prepare_input(inps, target_assignment, latents, flatten_inp=True):
+#     # Move inputs and latents to the device of target_assignment
+#     device = target_assignment.device
+#     inps = inps.to(device)
+#     latents = latents.to(device)
     
-    ta = target_assignment.detach()[None, :, :].expand(inps.shape[0], -1, -1)
-    inps = torch.cat([inps[:, :, None] * ta, ta], dim=-2).permute(0, 2, 1)
-    latents = latents[:, None].expand(-1, inps.shape[1], -1)
+#     ta = target_assignment.detach()[None, :, :].expand(inps.shape[0], -1, -1)
+#     inps = torch.cat([inps[:, :, None] * ta, ta], dim=-2).permute(0, 2, 1)
+#     latents = latents[:, None].expand(-1, inps.shape[1], -1)
+#     if flatten_inp:
+#         inps = inps.flatten(0, 1)
+#         latents = latents.flatten(0, 1)
+#     return inps, latents
+
+def prepare_input(inps_latent, target_assignment, latents_gt, flatten_inp=True):
+    """
+    [MODIFIED FUNCTION]
+    Prepares inputs (inps) and labels (latents) for the CausalEncoder.
+    Ensures variable scopes are clean to prevent dimension mismatch.
+    """
+    device = target_assignment.device
+
+    # 1. Move original data to device
+    inps = inps_latent.to(device)     # Shape (B, 40)
+    latents = latents_gt.to(device)    # Shape (B, 40)
+
+    # 2. Get original shape dimensions (B, 40)
+    orig_batch_size = inps.shape[0]
+    orig_latent_dim = inps.shape[1]  # This is 40
+
+    # 3. Create the expanded input features for the model
+    ta = target_assignment.detach()[None, :, :].expand(orig_batch_size, -1, -1) # Shape (B, 40, 40)
+
+    # 'inps' (B, 40, 1) * 'ta' (B, 40, 40) -> (B, 40, 40)
+    inps_features_part1 = inps[:, :, None] * ta
+
+    # Concat part1 (B, 40, 40) and 'ta' (B, 40, 40) along dim=-2 (the '40' dim)
+    inps_cat = torch.cat([inps_features_part1, ta], dim=-2) # Shape (B, 80, 40)
+
+    # Permute to (B, 40, 80) so model can iterate over 40 latents, each with 80 features
+    inps_expanded = inps_cat.permute(0, 2, 1) # Shape (B, 40, 80)
+
+    # 4. Create the expanded ground truth labels
+    # We must use the *original* latent dim (40), not the new feature dim (80)
+    latents_expanded = latents[:, None].expand(-1, orig_latent_dim, -1) # Shape (B, 40, NumCausalVars)
+
+    # 5. Flatten if needed
     if flatten_inp:
-        inps = inps.flatten(0, 1)
-        latents = latents.flatten(0, 1)
-    return inps, latents
+        inps_expanded = inps_expanded.flatten(0, 1)
+        latents_expanded = latents_expanded.flatten(0, 1)
+
+    return inps_expanded, latents_expanded
+
 
 def train_network(model, train_dataset, target_assignment, device, num_epochs=100):
     """
@@ -235,8 +276,11 @@ def train_network(model, train_dataset, target_assignment, device, num_epochs=10
     ).float().to(device)
 
     optimizer = optim.Adam(encoder.parameters(), lr=3e-3)
+    # train_loader = data.DataLoader(
+    #     train_dataset, batch_size=512, shuffle=True, drop_last=False
+    # )
     train_loader = data.DataLoader(
-        train_dataset, batch_size=512, shuffle=True, drop_last=False
+        train_dataset, batch_size=32, shuffle=True, drop_last=False
     )
     target_assignment = target_assignment.to(device)
     encoder.train()
@@ -470,7 +514,8 @@ def evaluate_causal_mappers(causal_encoders, test_dataset, ta_expanded, causal_v
     """
     Evaluate the causal mappers on the test dataset.
     """
-    test_loader = data.DataLoader(test_dataset, batch_size=64, shuffle=False)
+    # test_loader = data.DataLoader(test_dataset, batch_size=64, shuffle=False)
+    test_loader = data.DataLoader(test_dataset, batch_size=32, shuffle=False)
     all_predictions = []
     all_ground_truths = []
 
@@ -584,7 +629,8 @@ def evaluate_baseline_model(model, dataset, causal_var_info, output_folder, envi
 
     all_predictions = []
     all_ground_truths = []
-    dataloader = data.DataLoader(dataset, batch_size=512, shuffle=False)
+    # dataloader = data.DataLoader(dataset, batch_size=512, shuffle=False)
+    dataloader = data.DataLoader(dataset, batch_size=32, shuffle=False)
 
     keys = list(causal_var_info.keys())
     output_types = ['continuous' if 'continuous' in causal_var_info[key] else 'categorical' for key in keys]
@@ -764,8 +810,10 @@ def main():
         encoded_dataset, lengths=[train_size, val_size], generator=torch.Generator().manual_seed(42)
     )
 
-    train_loader = data.DataLoader(train_dataset, batch_size=512, shuffle=True, drop_last=False)
-    val_loader = data.DataLoader(val_dataset, batch_size=512, shuffle=False, drop_last=False)
+    # train_loader = data.DataLoader(train_dataset, batch_size=512, shuffle=True, drop_last=False)
+    # val_loader = data.DataLoader(val_dataset, batch_size=512, shuffle=False, drop_last=False)
+    train_loader = data.DataLoader(train_dataset, batch_size=32, shuffle=True, drop_last=False)
+    val_loader = data.DataLoader(val_dataset, batch_size=32, shuffle=False, drop_last=False)
 
     # -------------------- Train Causal Encoder and Compute R^2 Matrix --------------------
 

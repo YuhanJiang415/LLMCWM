@@ -20,7 +20,8 @@ sys.path.append('../../')
 from models.shared.visualization import visualize_reconstruction
 from models.shared.utils import log_matrix
 from models.shared.causal_encoder import CausalEncoder
-from experiments.datasets import iTHORDataset, CausalWorldDataset, GridworldDataset
+# from experiments.datasets import iTHORDataset, CausalWorldDataset, GridworldDataset
+from experiments.datasets import CausalWorldDataset, GridworldDataset
 import wandb
 
 from torchvision.utils import make_grid
@@ -540,37 +541,38 @@ class CorrelationMetricsLogCallback(pl.Callback):
                 wandb.log({f'corr_callback_{tag}_diag{self.log_postfix}': avg_diag}, step=trainer.global_step + 100 if is_test else trainer.global_step)
                 wandb.log({f'corr_callback_{tag}_max_off_diag{self.log_postfix}': max_off_diag}, step=trainer.global_step + 100 if is_test else trainer.global_step)
 
-        if isinstance(self.dataset, iTHORDataset):
-            if values.shape[1] == 18 and values.shape[0] == 10:
-                tvalues = torch.from_numpy(values)
-                tvalues = torch.cat([tvalues[:, :1], tvalues[:, 1:7].mean(dim=-1, keepdims=True),
-                        tvalues[:, 7:9], tvalues[:,9:13].mean(dim=-1, keepdims=True), tvalues[:,13:]], dim=-1).abs()
-                row_ind, col_ind = linear_sum_assignment(tvalues, maximize=True)
-                permuted_tvalues = tvalues[:, col_ind]
-                permuted_tvalues = permuted_tvalues[row_ind, :]
-                diagonal_mask = torch.eye(permuted_tvalues.size(0), dtype=torch.bool)
-                non_diagonal_mask = ~diagonal_mask
-                non_diagonal_elements = permuted_tvalues[non_diagonal_mask]
-                r2_avg_diag = permuted_tvalues.trace() / permuted_tvalues.size(0)
-                max_off_diag = non_diagonal_elements.max()
-                r2_avg_off_diag = non_diagonal_elements.mean()
-                if pl_module is None:
-                    if not isinstance(trainer.logger, pl.loggers.WandbLogger):
-                        trainer.logger.experiment.add_scalar(f'corr_callback_{tag}_diag_grouped_latents{self.log_postfix}', r2_avg_diag, global_step=trainer.global_step)
-                        trainer.logger.experiment.add_scalar(f'corr_callback_{tag}_max_off_diag_grouped_latents{self.log_postfix}', max_off_diag, global_step=trainer.global_step)
-                        trainer.logger.experiment.add_scalar(f'corr_callback_{tag}_off_diag_grouped_latents{self.log_postfix}', r2_avg_off_diag, global_step=trainer.global_step)
-                    else:
-                        wandb.log({f'corr_callback_{tag}_diag_grouped_latents{self.log_postfix}': r2_avg_diag}, step=trainer.global_step + 100 if is_test else trainer.global_step)
-                        wandb.log({f'corr_callback_{tag}_max_off_diag_grouped_latents{self.log_postfix}': max_off_diag}, step=trainer.global_step + 100 if is_test else trainer.global_step)
-                        wandb.log({f'corr_callback_{tag}_off_diag_grouped_latents{self.log_postfix}': r2_avg_off_diag}, step=trainer.global_step + 100 if is_test else trainer.global_step)
-                elif not isinstance(pl_module.logger, pl.loggers.WandbLogger):
-                    pl_module.log(f'corr_callback_{tag}_diag_grouped_latents{self.log_postfix}', r2_avg_diag)
-                    pl_module.log(f'corr_callback_{tag}_max_off_diag_grouped_latents{self.log_postfix}', max_off_diag)
-                    pl_module.log(f'corr_callback_{tag}_off_diag_grouped_latents{self.log_postfix}', r2_avg_off_diag)
-                else:
-                    wandb.log({f'corr_callback_{tag}_diag_grouped_latents{self.log_postfix}': r2_avg_diag}, step=trainer.global_step + 100 if is_test else trainer.global_step)
-                    wandb.log({f'corr_callback_{tag}_max_off_diag_grouped_latents{self.log_postfix}': max_off_diag}, step=trainer.global_step + 100 if is_test else trainer.global_step)
-                    wandb.log({f'corr_callback_{tag}_off_diag_grouped_latents{self.log_postfix}': r2_avg_off_diag}, step=trainer.global_step + 100 if is_test else trainer.global_step)
+        # if isinstance(self.dataset, iTHORDataset):
+        #     if values.shape[1] == 18 and values.shape[0] == 10:
+        #         tvalues = torch.from_numpy(values)
+        #         tvalues = torch.cat([tvalues[:, :1], tvalues[:, 1:7].mean(dim=-1, keepdims=True),
+        #                 tvalues[:, 7:9], tvalues[:,9:13].mean(dim=-1, keepdims=True), tvalues[:,13:]], dim=-1).abs()
+        #         row_ind, col_ind = linear_sum_assignment(tvalues, maximize=True)
+        #         permuted_tvalues = tvalues[:, col_ind]
+        #         permuted_tvalues = permuted_tvalues[row_ind, :]
+        #         diagonal_mask = torch.eye(permuted_tvalues.size(0), dtype=torch.bool)
+        #         non_diagonal_mask = ~diagonal_mask
+        #         non_diagonal_elements = permuted_tvalues[non_diagonal_mask]
+        #         r2_avg_diag = permuted_tvalues.trace() / permuted_tvalues.size(0)
+        #         max_off_diag = non_diagonal_elements.max()
+        #         r2_avg_off_diag = non_diagonal_elements.mean()
+        #         if pl_module is None:
+        #             if not isinstance(trainer.logger, pl.loggers.WandbLogger):
+        #                 trainer.logger.experiment.add_scalar(f'corr_callback_{tag}_diag_grouped_latents{self.log_postfix}', r2_avg_diag, global_step=trainer.global_step)
+        #                 trainer.logger.experiment.add_scalar(f'corr_callback_{tag}_max_off_diag_grouped_latents{self.log_postfix}', max_off_diag, global_step=trainer.global_step)
+        #                 trainer.logger.experiment.add_scalar(f'corr_callback_{tag}_off_diag_grouped_latents{self.log_postfix}', r2_avg_off_diag, global_step=trainer.global_step)
+        #             else:
+        #                 wandb.log({f'corr_callback_{tag}_diag_grouped_latents{self.log_postfix}': r2_avg_diag}, step=trainer.global_step + 100 if is_test else trainer.global_step)
+        #                 wandb.log({f'corr_callback_{tag}_max_off_diag_grouped_latents{self.log_postfix}': max_off_diag}, step=trainer.global_step + 100 if is_test else trainer.global_step)
+        #                 wandb.log({f'corr_callback_{tag}_off_diag_grouped_latents{self.log_postfix}': r2_avg_off_diag}, step=trainer.global_step + 100 if is_test else trainer.global_step)
+        #         elif not isinstance(pl_module.logger, pl.loggers.WandbLogger):
+        #             pl_module.log(f'corr_callback_{tag}_diag_grouped_latents{self.log_postfix}', r2_avg_diag)
+        #             pl_module.log(f'corr_callback_{tag}_max_off_diag_grouped_latents{self.log_postfix}', max_off_diag)
+        #             pl_module.log(f'corr_callback_{tag}_off_diag_grouped_latents{self.log_postfix}', r2_avg_off_diag)
+        #         else:
+        #             wandb.log({f'corr_callback_{tag}_diag_grouped_latents{self.log_postfix}': r2_avg_diag}, step=trainer.global_step + 100 if is_test else trainer.global_step)
+        #             wandb.log({f'corr_callback_{tag}_max_off_diag_grouped_latents{self.log_postfix}': max_off_diag}, step=trainer.global_step + 100 if is_test else trainer.global_step)
+        #             wandb.log({f'corr_callback_{tag}_off_diag_grouped_latents{self.log_postfix}': r2_avg_off_diag}, step=trainer.global_step + 100 if is_test else trainer.global_step)
+        
         if isinstance(self.dataset, GridworldDataset):
             if values.shape[1] == 18:
                 tvalues = torch.from_numpy(values)
@@ -655,13 +657,13 @@ class PermutationCorrelationMetricsLogCallback(CorrelationMetricsLogCallback):
         max_r2 = r2_matrix.argmax(dim=-1)
         ta = F.one_hot(max_r2, num_classes=r2_matrix.shape[-1]).float()
         # Group multi-dimensional causal variables together
-        if isinstance(self.dataset, iTHORDataset):
-            ta = torch.cat([ta[:,:1],
-                            ta[:,1:7].sum(dim=-1, keepdims=True),
-                            ta[:,7:9],
-                            ta[:,9:13].sum(dim=-1, keepdims=True),
-                            ta[:,13:]], dim=-1)
-        elif isinstance(self.dataset, CausalWorldDataset):
+        # if isinstance(self.dataset, iTHORDataset):
+        #     ta = torch.cat([ta[:,:1],
+        #                     ta[:,1:7].sum(dim=-1, keepdims=True),
+        #                     ta[:,7:9],
+        #                     ta[:,9:13].sum(dim=-1, keepdims=True),
+        #                     ta[:,13:]], dim=-1)
+        if isinstance(self.dataset, CausalWorldDataset):
             ta = torch.cat([ta[:,:6],
                             ta[:,6:].sum(dim=-1, keepdims=True)], dim=-1)
         elif isinstance(self.dataset, GridworldDataset):

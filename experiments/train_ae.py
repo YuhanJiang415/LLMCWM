@@ -7,9 +7,11 @@ import torch.utils.data as data
 import pytorch_lightning as pl
 
 import sys
-sys.path.append('../')
+sys.path.append('./')
 from models.ae import Autoencoder
-from experiments.datasets import VoronoiDataset, CausalWorldDataset, iTHORDataset, GridworldDataset
+# from experiments.datasets import VoronoiDataset, CausalWorldDataset, iTHORDataset, GridworldDataset
+from experiments.datasets import VoronoiDataset, CausalWorldDataset, GridworldDataset
+
 from experiments.utils import train_model, print_params
 import wandb
 
@@ -43,8 +45,8 @@ if __name__ == '__main__':
         DataClass = VoronoiDataset
     elif 'causal_world' in args.data_dir:
         DataClass = CausalWorldDataset
-    elif 'ithor' in args.data_dir:
-        DataClass = iTHORDataset
+    # elif 'ithor' in args.data_dir:
+    #     DataClass = iTHORDataset
     elif 'gridworld' in args.data_dir:
         DataClass = GridworldDataset
     else:

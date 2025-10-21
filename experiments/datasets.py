@@ -14,7 +14,7 @@ from glob import glob
 import sys
 sys.path.append('../')
 from torch.utils.data import Dataset        
-from data_generation.data_generation_ithor import create_targets
+# from data_generation.data_generation_ithor import create_targets
 from random import sample
 
 
@@ -735,7 +735,7 @@ class iTHORDataset(data.Dataset):
             data_seq_keys += ['action_type', 'object_name']
             if 'targets' not in data_seq_keys:
                 data_seq_keys.append('targets')
-                targets = create_targets(action_info, action_info['causal_keys'])
+                # targets = create_targets(action_info, action_info['causal_keys'])
             else:
                 targets = None
             if np.isnan(data_seq['actions']).any():

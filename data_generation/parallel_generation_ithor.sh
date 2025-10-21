@@ -21,7 +21,8 @@ fi
 for ((offset=start_offset; offset<$num_sequences; offset+=$chunk_size)); do
     echo "Running chunk $offset"
     start=`date +%s`
-    python data_generation/data_generation_ithor.py --offset $offset --chunk_size $chunk_size --output_folder data/ithor_eval/ --prefix $prefix --num_sequences $num_sequences --save_objects_states
+    # python data_generation/data_generation_ithor.py --offset $offset --chunk_size $chunk_size --output_folder data/ithor_eval/ --prefix $prefix --num_sequences $num_sequences --save_objects_states
+    xvfb-run -a python data_generation/data_generation_ithor.py --offset $offset --chunk_size $chunk_size --output_folder data/ithor_eval/ --prefix $prefix --num_sequences $num_sequences --save_objects_states
     echo "Done with chunk $offset out of $num_sequences"
     echo "-----------------------------------"
     end=`date +%s`
