@@ -248,7 +248,6 @@ def prepare_input(inps_latent, target_assignment, latents_gt, flatten_inp=True):
 
     return inps_expanded, latents_expanded
 
-
 def train_network(model, train_dataset, target_assignment, device, num_epochs=100):
     """
     Train the causal encoder network.
